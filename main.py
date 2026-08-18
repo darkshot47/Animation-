@@ -1,16 +1,34 @@
 import os
 import asyncio
 import random
+import threading
+from flask import Flask
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.exceptions import TelegramRetryAfter
 
-# Render ke environment variable se token fetch karna
+# ==========================================
+# 1. Flask Web Server Setup (Render Web Service ke liye)
+# ==========================================
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is running successfully on Render!"
+
+def run_flask():
+    # Render automatically PORT environment variable assign karta hai
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
+
+
+# ==========================================
+# 2. Telegram Bot Setup & Animations
+# ==========================================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-# Agar Render par token set nahi hua hoga, toh script error dekar bata degi
 if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN environment variable is not set!")
+    raise ValueError("BOT_TOKEN environment variable is not set! Kripya Render par BOT_TOKEN add karein.")
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -27,11 +45,11 @@ ALL_EMOJI_CATEGORIES = {
     "Symbols & Hearts": ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❤️‍🔥", "💯", "💢", "💥", "💫", "💦", "💨", "🛑", "⛔", "⭕", "❌", "❓", "❗", "⚠️"]
 }
 
-# Sabhi categories ke emojis ko ek single pool me combine karna
+# Sabhi categories ke emojis ko ek single list me combine karna
 FULL_EMOJI_POOL = [emoji for group in ALL_EMOJI_CATEGORIES.values() for emoji in group]
 
 
-# 1. /rocket Command (Apni jagah rocket animation)
+# Command 1: /rocket (Apni jagah rocket animation)
 @dp.message(Command("rocket"))
 async def cmd_rocket(message: types.Message):
     frames = [
@@ -57,7 +75,7 @@ async def cmd_rocket(message: types.Message):
             pass
 
 
-# 2. /big Command (Bada random emoji animation - Static in-place replace)
+# Command 2: /big (Bada random emoji animation - Static in-place replace)
 @dp.message(Command("big"))
 async def cmd_big_animation(message: types.Message):
     msg = await message.answer("🌀 Initializing Big Emoji Matrix...")
@@ -66,6 +84,7 @@ async def cmd_big_animation(message: types.Message):
     total_frames = 15
     
     for i in range(total_frames):
+        # 9 random emojis select karna ek 3x3 grid ke liye
         selected_emojis = random.sample(FULL_EMOJI_POOL, 9)
         
         frame_text = (
@@ -82,12 +101,19 @@ async def cmd_big_animation(message: types.Message):
         except Exception:
             pass
 
+    # Animation khatam hone par final message
     final_emojis = random.sample(FULL_EMOJI_POOL, 3)
     await msg.edit_text(f"✨ Animation Complete! ✨\n\n{' '.join(final_emojis)}")
 
 
+# ==========================================
+# 3. Main Runner (Flask Thread + Bot Polling)
+# ==========================================
 async def main():
-    print("Bot is starting...")
+    # Flask server ko alag thread me start karna taaki bot ka polling block na ho
+    threading.Thread(target=run_flask, daemon=True).start()
+    
+    print("Bot and Flask server are starting...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
