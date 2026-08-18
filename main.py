@@ -73,4 +73,3 @@ async def stop_rocket_callback(callback: types.CallbackQuery):
         await callback.message.edit_text("🛑 Animation stopped.", reply_markup=None)
         del active_animations[chat_id]
         await callback.answer("Stopped!")
-      
