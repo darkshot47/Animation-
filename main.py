@@ -11,13 +11,13 @@ from aiogram.exceptions import TelegramRetryAfter, TelegramBadRequest
 
 
 # ==========================================
-# 1. Flask Web Server Setup
+# 1. Flask Web Server Setup (Render ke liye)
 # ==========================================
 
 app = Flask(__name__)
 
 
-@app.route("/")
+@app.route('/')
 def home():
     return "Bot is running successfully on Render with Infinite Animation!"
 
@@ -59,10 +59,10 @@ RENDER_URL = "https://animation-0wko.onrender.com/"
 
 async def keep_alive():
     """
-    Har 60 seconds mein Render URL ko request karega.
+    Har 1 minute par Render URL ko ping karega.
     """
 
-    timeout = aiohttp.ClientTimeout(total=20)
+    timeout = aiohttp.ClientTimeout(total=15)
 
     async with aiohttp.ClientSession(
         timeout=timeout
@@ -71,75 +71,61 @@ async def keep_alive():
         while True:
 
             try:
-
                 async with session.get(
                     RENDER_URL
                 ) as response:
 
                     print(
                         f"[KEEP-ALIVE] "
-                        f"Status: {response.status}"
+                        f"Ping: {response.status}"
                     )
-
-            except asyncio.CancelledError:
-                print("[KEEP-ALIVE] Task cancelled.")
-                raise
 
             except Exception as e:
 
                 print(
                     f"[KEEP-ALIVE] "
-                    f"Error: {repr(e)}"
+                    f"Error: {e}"
                 )
 
-            # 60 seconds wait
             await asyncio.sleep(60)
 
 
 # ==========================================
-# 4. Massive Emoji Collection
+# 4. MASSIVE Emoji Collection Generation
 # ==========================================
 
 FULL_EMOJI_POOL = []
 
-
 emoji_ranges = [
     (0x1F600, 0x1F64F),  # Smileys & Emotion
-    (0x1F300, 0x1F5FF),  # Misc Symbols
-    (0x1F680, 0x1F6FF),  # Transport
-    (0x1F900, 0x1F9FF),  # Supplemental
-    (0x1FA70, 0x1FAFF),  # Extended
-    (0x2600, 0x26FF),    # Misc Symbols
+    (0x1F300, 0x1F5FF),  # Misc Symbols and Pictographs
+    (0x1F680, 0x1F6FF),  # Transport and Map
+    (0x1F900, 0x1F9FF),  # Supplemental Symbols
+    (0x1FA70, 0x1FAFF),  # Extended Symbols
+    (0x2600, 0x26FF),    # Miscellaneous Symbols
     (0x2700, 0x27BF),    # Dingbats
 ]
 
 
 for start, end in emoji_ranges:
 
-    for codepoint in range(
-        start,
-        end + 1
-    ):
+    for i in range(start, end + 1):
 
         FULL_EMOJI_POOL.append(
-            chr(codepoint)
+            chr(i)
         )
 
 
-print(
-    f"Emoji pool loaded: "
-    f"{len(FULL_EMOJI_POOL)} characters"
-)
-
+# ==========================================
+# 5. Commands & Animations
+# ==========================================
 
 # ==========================================
-# 5. /rocket Command
+# Command 1: /rocket
 # ==========================================
 
 @dp.message(Command("rocket"))
-async def cmd_rocket(
-    message: types.Message
-):
+async def cmd_rocket(message: types.Message):
 
     frames = [
         "🔴 Countdown: 3...",
@@ -152,83 +138,32 @@ async def cmd_rocket(
         "🎉 Mission Accomplished! 🛰️"
     ]
 
-    try:
+    msg = await message.answer(frames[0])
 
-        msg = await message.answer(
-            frames[0]
-        )
+    for frame in frames[1:]:
 
-        for frame in frames[1:]:
+        await asyncio.sleep(0.6)
 
-            await asyncio.sleep(0.6)
+        try:
 
-            while True:
+            await msg.edit_text(frame)
 
-                try:
+        except TelegramRetryAfter as e:
 
-                    await msg.edit_text(
-                        frame
-                    )
+            await asyncio.sleep(
+                e.retry_after
+            )
 
-                    break
+            await msg.edit_text(frame)
 
-                except TelegramRetryAfter as e:
+        except Exception:
 
-                    print(
-                        f"[ROCKET] "
-                        f"Rate limit: "
-                        f"{e.retry_after}s"
-                    )
-
-                    await asyncio.sleep(
-                        e.retry_after
-                    )
-
-                except TelegramBadRequest as e:
-
-                    error = str(e).lower()
-
-                    print(
-                        f"[ROCKET] "
-                        f"Telegram error: "
-                        f"{error}"
-                    )
-
-                    if (
-                        "message to edit not found"
-                        in error
-                        or
-                        "message can't be edited"
-                        in error
-                    ):
-                        return
-
-                    # Dusre Telegram errors par
-                    # thoda wait karke next frame
-                    break
-
-                except Exception as e:
-
-                    print(
-                        f"[ROCKET] "
-                        f"Unexpected error: "
-                        f"{repr(e)}"
-                    )
-
-                    break
-
-    except Exception as e:
-
-        print(
-            f"[ROCKET] "
-            f"Command error: "
-            f"{repr(e)}"
-        )
+            pass
 
 
 # ==========================================
-# 6. /big Command
-# Infinite Emoji Animation
+# Command 2: /big
+# BINA RUKE chalne wala Infinite Animation
 # ==========================================
 
 @dp.message(Command("big"))
@@ -236,189 +171,99 @@ async def cmd_big_animation(
     message: types.Message
 ):
 
-    try:
+    msg = await message.answer(
+        "🌀 Opening Infinite Emoji Matrix..."
+    )
 
-        msg = await message.answer(
-            "🌀 Opening Infinite Emoji Matrix..."
+    await asyncio.sleep(0.5)
+
+    # Infinite animation
+    while True:
+
+        # 3000+ emojis me se 9 random
+        selected_emojis = random.sample(
+            FULL_EMOJI_POOL,
+            9
         )
 
-        await asyncio.sleep(0.5)
+        frame_text = (
+            f"{selected_emojis[0]}  "
+            f"{selected_emojis[1]}  "
+            f"{selected_emojis[2]}\n\n"
 
-        while True:
+            f"{selected_emojis[3]}  "
+            f"{selected_emojis[4]}  "
+            f"{selected_emojis[5]}\n\n"
 
-            # 9 random emojis
-            selected_emojis = random.sample(
-                FULL_EMOJI_POOL,
-                9
-            )
-
-            frame_text = (
-                f"{selected_emojis[0]}  "
-                f"{selected_emojis[1]}  "
-                f"{selected_emojis[2]}\n\n"
-
-                f"{selected_emojis[3]}  "
-                f"{selected_emojis[4]}  "
-                f"{selected_emojis[5]}\n\n"
-
-                f"{selected_emojis[6]}  "
-                f"{selected_emojis[7]}  "
-                f"{selected_emojis[8]}"
-            )
-
-            try:
-
-                await msg.edit_text(
-                    frame_text
-                )
-
-                print(
-                    "[BIG] Frame updated"
-                )
-
-                # Animation speed
-                await asyncio.sleep(0.8)
-
-            except TelegramRetryAfter as e:
-
-                print(
-                    f"[BIG] "
-                    f"Rate limit: "
-                    f"{e.retry_after}s"
-                )
-
-                await asyncio.sleep(
-                    e.retry_after
-                )
-
-            except TelegramBadRequest as e:
-
-                error = str(e).lower()
-
-                print(
-                    f"[BIG] "
-                    f"Telegram error: "
-                    f"{error}"
-                )
-
-                # User ne message delete kar diya
-                if (
-                    "message to edit not found"
-                    in error
-                    or
-                    "message can't be edited"
-                    in error
-                ):
-                    print(
-                        "[BIG] "
-                        "Message no longer editable."
-                    )
-
-                    break
-
-                # Same content wala error
-                if "message is not modified" in error:
-
-                    await asyncio.sleep(
-                        0.8
-                    )
-
-                    continue
-
-                await asyncio.sleep(1)
-
-            except Exception as e:
-
-                print(
-                    f"[BIG] "
-                    f"Unexpected error: "
-                    f"{repr(e)}"
-                )
-
-                await asyncio.sleep(1)
-
-    except Exception as e:
-
-        print(
-            f"[BIG] "
-            f"Command error: "
-            f"{repr(e)}"
+            f"{selected_emojis[6]}  "
+            f"{selected_emojis[7]}  "
+            f"{selected_emojis[8]}"
         )
+
+        try:
+
+            await msg.edit_text(
+                frame_text
+            )
+
+            # 0.8 second delay
+            await asyncio.sleep(0.8)
+
+        except TelegramRetryAfter as e:
+
+            await asyncio.sleep(
+                e.retry_after
+            )
+
+        except TelegramBadRequest as e:
+
+            if (
+                "message to edit not found"
+                in str(e).lower()
+                or
+                "message is not modified"
+                in str(e).lower()
+            ):
+                break
+
+        except Exception:
+
+            await asyncio.sleep(1)
 
 
 # ==========================================
-# 7. Main Runner
+# 6. Main Runner
 # ==========================================
 
 async def main():
 
-    print(
-        "===================================="
-    )
-
-    print(
-        "Starting Flask server..."
-    )
-
-    flask_thread = threading.Thread(
+    # Flask server ko alag thread me chalana
+    threading.Thread(
         target=run_flask,
         daemon=True
-    )
+    ).start()
 
-    flask_thread.start()
-
-    print(
-        "Starting Render keep-alive..."
-    )
-
-    keep_alive_task = asyncio.create_task(
+    # Keep-alive background task
+    asyncio.create_task(
         keep_alive()
     )
 
     print(
-        "Starting Telegram bot..."
+        "Bot and Flask server are starting..."
     )
 
     print(
-        "===================================="
+        "Render keep-alive started "
+        "(60 seconds interval)"
     )
 
-    try:
-
-        await dp.start_polling(
-            bot
-        )
-
-    finally:
-
-        print(
-            "Stopping keep-alive..."
-        )
-
-        keep_alive_task.cancel()
-
-        try:
-            await keep_alive_task
-        except asyncio.CancelledError:
-            pass
-
-        await bot.session.close()
+    # Telegram bot start
+    await dp.start_polling(bot)
 
 
 # ==========================================
-# 8. Start Application
+# 7. Start
 # ==========================================
 
 if __name__ == "__main__":
-
-    try:
-
-        asyncio.run(
-            main()
-        )
-
-    except KeyboardInterrupt:
-
-        print(
-            "Bot stopped manually."
-    )
+    asyncio.run(main())
