@@ -5,25 +5,24 @@ import threading
 from flask import Flask
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from aiogram.exceptions import TelegramRetryAfter
+from aiogram.exceptions import TelegramRetryAfter, TelegramBadRequest
 
 # ==========================================
-# 1. Flask Web Server Setup (Render Web Service ke liye)
+# 1. Flask Web Server Setup (Render ke liye)
 # ==========================================
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot is running successfully on Render!"
+    return "Bot is running successfully on Render with Infinite Animation!"
 
 def run_flask():
-    # Render automatically PORT environment variable assign karta hai
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port)
 
 
 # ==========================================
-# 2. Telegram Bot Setup & Animations
+# 2. Telegram Bot Setup
 # ==========================================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
@@ -33,23 +32,31 @@ if not BOT_TOKEN:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# Saari categories ke emojis ka collection
-ALL_EMOJI_CATEGORIES = {
-    "Smileys & Emotion": ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "🥹", "😊", "😇", "🙂", "😉", "😍", "🥰", "😘", "😜", "🤩", "🥳", "😎", "🤯", "🥵", "🥶", "😱", "🔥", "✨"],
-    "Hand Gestures & People": ["👍", "👎", "👌", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "👇", "👏", "🙌", "👐", "🤝", "🙏", "💪", "🫡", "🙋‍♂️", "👑"],
-    "Animals & Nature": ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🦅", "🦉", "🐺", "🦄", "🐝", "🦋"],
-    "Food & Drink": ["🍏", "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍒", "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🥑", "🍔", "🍟", "🍕", "🌭", "🍿", "🍩", "🍪"],
-    "Activities & Sports": ["⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎱", "🪀", "🏓", "🏸", "🏒", "🥊", "🥋", "🎯", "⛳", "🎮", "🎲"],
-    "Travel & Places": ["🚗", "🚕", "🚙", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒", "🚐", "🛻", "🚚", "🚛", "🚜", "🛵", "🏍️", "🛺", "🚲", "✈️", "🚀", "🛸", "🚁", "⛵", "🚢"],
-    "Objects & Items": ["⌚", "📱", "📲", "💻", "⌨️", "🖥️", "🖨️", "🕹️", "💽", "💾", "💿", "📀", "📷", "📸", "📹", "🎥", "📽️", "💡", "🔦", "💎", "🔮", "🪄", "💣", "🎁"],
-    "Symbols & Hearts": ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❤️‍🔥", "💯", "💢", "💥", "💫", "💦", "💨", "🛑", "⛔", "⭕", "❌", "❓", "❗", "⚠️"]
-}
+# ==========================================
+# 3. MASSIVE Emoji Collection Generation (3000+ Emojis)
+# ==========================================
+FULL_EMOJI_POOL = []
+# Unicode hex ranges jahan duniya bhar ke sabhi emojis hote hain
+emoji_ranges = [
+    (0x1F600, 0x1F64F), # Smileys & Emotion
+    (0x1F300, 0x1F5FF), # Misc Symbols and Pictographs (Weather, Food, Animals)
+    (0x1F680, 0x1F6FF), # Transport and Map
+    (0x1F900, 0x1F9FF), # Supplemental Symbols (New emojis)
+    (0x1FA70, 0x1FAFF), # Extended Symbols
+    (0x2600, 0x26FF),   # Miscellaneous Symbols
+    (0x2700, 0x27BF),   # Dingbats (Stars, Sparkles, etc.)
+]
 
-# Sabhi categories ke emojis ko ek single list me combine karna
-FULL_EMOJI_POOL = [emoji for group in ALL_EMOJI_CATEGORIES.values() for emoji in group]
+for start, end in emoji_ranges:
+    for i in range(start, end + 1):
+        FULL_EMOJI_POOL.append(chr(i))
 
 
-# Command 1: /rocket (Apni jagah rocket animation)
+# ==========================================
+# 4. Commands & Animations
+# ==========================================
+
+# Command 1: /rocket
 @dp.message(Command("rocket"))
 async def cmd_rocket(message: types.Message):
     frames = [
@@ -75,42 +82,47 @@ async def cmd_rocket(message: types.Message):
             pass
 
 
-# Command 2: /big (Bada random emoji animation - Static in-place replace)
+# Command 2: /big (BINA RUKE chalne wala Infinite Animation)
 @dp.message(Command("big"))
 async def cmd_big_animation(message: types.Message):
-    msg = await message.answer("🌀 Initializing Big Emoji Matrix...")
-    await asyncio.sleep(0.4)
-
-    total_frames = 15
+    msg = await message.answer("🌀 Opening Infinite Emoji Matrix...")
+    await asyncio.sleep(0.5)
     
-    for i in range(total_frames):
-        # 9 random emojis select karna ek 3x3 grid ke liye
+    # 'while True' ka matlab hai ye loop kabhi khatam nahi hoga (Infinite)
+    while True:
+        # 3000+ emojis me se koi bhi 9 random uthayega
         selected_emojis = random.sample(FULL_EMOJI_POOL, 9)
         
         frame_text = (
-            f"{selected_emojis[0]}  {selected_emojis[1]}  {selected_emojis[2]}\n"
-            f"{selected_emojis[3]}  {selected_emojis[4]}  {selected_emojis[5]}\n"
+            f"{selected_emojis[0]}  {selected_emojis[1]}  {selected_emojis[2]}\n\n"
+            f"{selected_emojis[3]}  {selected_emojis[4]}  {selected_emojis[5]}\n\n"
             f"{selected_emojis[6]}  {selected_emojis[7]}  {selected_emojis[8]}"
         )
         
         try:
             await msg.edit_text(frame_text)
-            await asyncio.sleep(0.35)
+            # 0.8 second ka delay diya hai taaki Telegram bot ko block na kare (Flood limits)
+            await asyncio.sleep(0.8)
+            
         except TelegramRetryAfter as e:
+            # Agar Telegram ko lagta hai bot fast hai, toh bot utne time chup chap wait karega
             await asyncio.sleep(e.retry_after)
+            
+        except TelegramBadRequest as e:
+            # Agar user ne message delete kar diya, toh animation stop ho jayega
+            if "message to edit not found" in str(e).lower() or "message is not modified" in str(e).lower():
+                break  # Loop yahan tod diya jayega taaki bot crash na ho
+                
         except Exception:
-            pass
-
-    # Animation khatam hone par final message
-    final_emojis = random.sample(FULL_EMOJI_POOL, 3)
-    await msg.edit_text(f"✨ Animation Complete! ✨\n\n{' '.join(final_emojis)}")
+            # Kisi bhi chhote mote network issue par bas aage badh jayega
+            await asyncio.sleep(1)
 
 
 # ==========================================
-# 3. Main Runner (Flask Thread + Bot Polling)
+# 5. Main Runner (Flask Thread + Bot)
 # ==========================================
 async def main():
-    # Flask server ko alag thread me start karna taaki bot ka polling block na ho
+    # Flask server ko alag thread me chalana
     threading.Thread(target=run_flask, daemon=True).start()
     
     print("Bot and Flask server are starting...")
